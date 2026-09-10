@@ -1,0 +1,6 @@
+<!DOCTYPE html><meta charset="utf-8"><title>RNode Console</title>
+<script>
+// Redirect to the RNode Console shipped with the latest mirrored microReticulum release.
+fetch('../firmware/index.json',{cache:'no-store'}).then(r=>r.json()).then(d=>{const f=d.families.microreticulum;const t=f&&f.latest;if(t&&f.versions[t].assets['console.html']){location.replace('../firmware/microreticulum/'+encodeURIComponent(t)+'/console.html');}else{document.body.textContent='No console has been published yet.';}}).catch(()=>{document.body.textContent='Firmware index unavailable.';});
+</script>
+<p style="font-family:system-ui;padding:2rem">Opening the RNode Console…</p>
