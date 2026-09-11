@@ -650,6 +650,19 @@ function selectLatest() {
   if (pick) selectVersion(pick);
 }
 
+// ---------- safety: never navigate away from a device mid-operation ----------
+// Every link opens in a new tab (a page load during DFU or provisioning would
+// leave the board half-written), and leaving/refreshing while busy warns.
+document.addEventListener('click', (ev) => {
+  const a = ev.target.closest && ev.target.closest('a[href]'); if (!a) return;
+  const href = a.getAttribute('href') || '';
+  if (href.startsWith('#') || a.hasAttribute('download')) return;
+  a.target = '_blank'; a.rel = 'noopener';
+});
+window.addEventListener('beforeunload', (ev) => {
+  if (S.busy || (S.step >= 4 && S.step <= 6 && S.transport)) { ev.preventDefault(); ev.returnValue = 'A device operation is in progress — leaving now could leave the board half-flashed.'; }
+});
+
 // ---------- render ----------
 function render() {
   renderRail();
