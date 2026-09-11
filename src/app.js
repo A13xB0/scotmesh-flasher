@@ -30,6 +30,10 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const board = () => boardById(S.board);
 const family = () => FAMILY_FOR[S.path];
+// microReticulum nodes mount the storage partition as LittleFS (formatting the SPIFFS console
+// image on first boot), and the 4 MB node boards now use a 2.25 MB app slot that covers 0x210000,
+// so the console image is never written for that family.
+const espFiles = (b) => Object.fromEntries(Object.entries(b.esp.files).filter(([, n]) => !(family() === 'microreticulum' && n === 'console_image.bin')));
 const nodeish = () => S.path !== 'rnode';
 const fmtKB = (n) => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB';
 export function log(msg, cls = '') {
@@ -159,7 +163,7 @@ V[2] = () => {
         <p class="small" style="margin-top:10px">${cur ? `<a href="${esc(cur[1].url)}" target="_blank" rel="noopener">Release notes</a> · ` : ''}${S.fw ? `<a href="firmware/${family()}/${encodeURIComponent(S.fw.tag)}/${esc(asset)}" download>Download the zip instead</a>` : ''}</p>
       </div></div>
     ${errorBox()}
-    ${hood([`<code>GET /firmware/index.json</code> lists families, versions and per-asset size + sha256 (written hourly by the mirror on this server).`, `<code>GET /firmware/${family()}/&lt;tag&gt;/${esc(asset)}</code> streams the zip with progress; it is hashed with WebCrypto and compared to the index, then unpacked in memory (zip.js).`, b.platform === PLATFORM.NRF52 ? 'The DFU package’s <code>manifest.json</code> and init packet are parsed now, so a SoftDevice mismatch is reported before anything is written.' : 'The zip’s bootloader, partition table, boot_app0, application and <code>console_image.bin</code> are mapped to the board’s flash offsets.'])}
+    ${hood([`<code>GET /firmware/index.json</code> lists families, versions and per-asset size + sha256 (written hourly by the mirror on this server).`, `<code>GET /firmware/${family()}/&lt;tag&gt;/${esc(asset)}</code> streams the zip with progress; it is hashed with WebCrypto and compared to the index, then unpacked in memory (zip.js).`, b.platform === PLATFORM.NRF52 ? 'The DFU package’s <code>manifest.json</code> and init packet are parsed now, so a SoftDevice mismatch is reported before anything is written.' : 'The zip’s bootloader, partition table, boot_app0 and application are mapped to the board’s flash offsets (<code>console_image.bin</code> too, for RNode radios only — a node mounts that partition as its own store).'])}
     <div class="actions"><button class="btn" onclick="app.go(1)" ${S.busy ? 'disabled' : ''}>Back</button><span class="spacer"></span><button class="btn primary big" ${S.pkg ? '' : 'disabled'} onclick="app.go(3)">Continue</button></div>
   </section>`;
 };
@@ -334,7 +338,7 @@ const app = {
       } else {
         const name = Object.entries(b.esp.files).find(([a]) => Number(a) === 0x10000)[1];
         if (!files[name]) throw new Error(name + ' missing from package');
-        for (const n of Object.values(b.esp.files)) if (!files[n]) throw new Error(n + ' missing from package');
+        for (const n of Object.values(espFiles(b))) if (!files[n]) throw new Error(n + ' missing from package');
         hash = await espImageHash(files[name]); hashKind = 'ESP image digest of ' + name;
       }
       S.pkg = { bytes, files, hash, hashKind, ...extra };
@@ -395,7 +399,7 @@ const app = {
         await attach(t); check(2, 'ok', t.name); await sleep(800);
       } else {
         check(0, 'run');
-        await flashEsp32({ port: S.portObj, board: b, files: S.pkg.files, log, progress: (pct, msg) => { check(0, 'ok', 'connected'); if (pct < 60) check(1, 'run'); else { check(1, 'ok'); check(2, 'run'); } setProgress(pct * 0.9, msg); } });
+        await flashEsp32({ port: S.portObj, board: b, espFiles: espFiles(b), files: S.pkg.files, log, progress: (pct, msg) => { check(0, 'ok', 'connected'); if (pct < 60) check(1, 'run'); else { check(1, 'ok'); check(2, 'run'); } setProgress(pct * 0.9, msg); } });
         check(2, 'ok'); check(3, 'run'); setProgress(92, 'Waiting for the board to reboot…');
         await sleep(1500);
         const t = await waitForPort({ match: (i) => i.vid === b.usb.app.vid, timeoutMs: 20000, log });

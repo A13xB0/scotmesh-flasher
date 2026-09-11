@@ -5,9 +5,9 @@ import { md5hex } from './md5.js';
 import { sleep } from './serial.js';
 import { DfuSerial, dfuTouch } from './nrfdfu.js';
 
-export async function flashEsp32({ port, board, files, log, progress }) {
+export async function flashEsp32({ port, board, espFiles, files, log, progress }) {
   const fileArray = [];
-  for (const [addr, name] of Object.entries(board.esp.files)) {
+  for (const [addr, name] of Object.entries(espFiles || board.esp.files)) {
     const data = files[name];
     if (!data) throw new Error(`${name} is missing from the firmware package`);
     fileArray.push({ address: Number(addr), data: binaryString(data), name });
