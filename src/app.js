@@ -375,8 +375,8 @@ const app = {
     try {
       if (b.platform === PLATFORM.NRF52) {
         if (!S.bootPort) throw new Error('no bootloader port — go back to Connect');
-        check(0, 'run'); const zipBlob = new Blob([S.pkg.bytes]);
-        await flashNrf52({ bootPort: S.bootPort, zipBlob, log, progress: (pct, msg) => { if (pct > 0) { check(0, 'ok', 'accepted'); check(1, 'run'); } setProgress(pct * 0.9, msg); } });
+        check(0, 'run'); const app = nrfApplication(S.pkg.files);
+        await flashNrf52({ bootPort: S.bootPort, app, log, progress: (pct, msg) => { if (pct > 0) { check(0, 'ok', 'acked'); check(1, 'run'); } setProgress(pct * 0.9, msg); } });
         check(1, 'ok', `${S.pkg.files[Object.keys(S.pkg.files).find(k => k.endsWith('.bin'))].length} B`); check(2, 'run'); setProgress(92, 'Waiting for the board to reboot…');
         S.bootPort = null;
         const t = await waitForPort({ match: (i) => i.vid === b.usb.app.vid && i.pid !== (b.usb.boot && b.usb.boot.pid), timeoutMs: 20000, log });

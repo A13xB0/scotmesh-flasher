@@ -3,6 +3,7 @@
 import { ESPLoader, Transport } from '../lib/esptool-js-0.4.5.js';
 import { md5hex } from './md5.js';
 import { sleep } from './serial.js';
+import { DfuSerial, dfuTouch } from './nrfdfu.js';
 
 export async function flashEsp32({ port, board, files, log, progress }) {
   const fileArray = [];
@@ -38,19 +39,15 @@ export async function flashEsp32({ port, board, files, log, progress }) {
   }
 }
 
-export async function flashNrf52({ bootPort, zipBlob, log, progress }) {
-  // Nrf52DfuFlasher (liamcottle) is a global from lib/nrf52_dfu_flasher.js
-  const flasher = new Nrf52DfuFlasher(bootPort);
-  await flasher.flash(zipBlob, (pct, msg) => progress(pct, msg || 'Writing application'));
-  log('DFU: image sent, bootloader is activating it', 'ok');
-  try { await bootPort.close(); } catch (_) {}
+export async function flashNrf52({ bootPort, app, log, progress }) {
+  const dfu = new DfuSerial(bootPort, log);
+  await dfu.open();
+  try { await dfu.flashApplication(app.bin, app.dat, progress); }
+  finally { await sleep(300); await dfu.close(); }
 }
 
 // Open+close at 1200 baud: the Adafruit bootloader treats it as "enter serial DFU".
-export async function nrfTouch(port) {
-  const flasher = new Nrf52DfuFlasher(port);
-  await flasher.enterDfuMode();
-}
+export async function nrfTouch(port) { await dfuTouch(port); }
 
 function binaryString(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return s; }
 function latin1(s) { const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i) & 0xFF; return u; }
