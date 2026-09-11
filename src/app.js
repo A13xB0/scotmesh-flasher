@@ -163,7 +163,7 @@ V[3] = () => {
     ${rc ? '' : `<div class="steps-inline">
       <div class="stepbox"><div class="n">1</div><h3>Plug in over USB</h3><p>Any port on this computer. Unplug other serial devices if you are unsure which is which.</p></div>
       <div class="stepbox"><div class="n">2</div><h3>Choose the port</h3><p>${nrf ? 'Look for <b>' + esc(b.name) + '</b> or a “USB Serial Device”.' : 'Look for “USB JTAG/serial debug unit” or “CP210x”.'}</p></div>
-      <div class="stepbox"><div class="n">3</div><h3>${nrf ? 'We enter the bootloader for you' : 'We reset it into download mode'}</h3><p>${nrf ? 'The board disconnects and reappears as its bootloader. Because it is a different USB device, the browser will ask you to pick it once more.' : 'Hold BOOT while plugging in if it does not respond.'}</p></div></div>`}
+      <div class="stepbox"><div class="n">3</div><h3>${nrf ? 'We enter the bootloader for you' : 'We reset it into download mode'}</h3><p>${nrf ? 'The board disconnects and reappears as its bootloader. It is a different USB device, so the first time the browser asks you to pick it once more (remembered after that). Shortcut: double‑tap reset first and pick the bootloader device straight away.' : 'Hold BOOT while plugging in if it does not respond.'}</p></div></div>`}
     <div id="connbox">
       ${S.portLabel ? `<div class="devline"><span class="ico">✓</span><span><b>${esc(S.portLabel)}</b><small>${esc(S.portSub || '')}</small></span><span class="spacer"></span><span class="pill good"><span class="dot"></span>Connected</span></div>`
         : S.needsPicker ? `<div class="devline"><span class="ico">…</span><span><b>${esc(S.needsPicker.title)}</b><small>${esc(S.needsPicker.text)}</small></span><span class="spacer"></span><button class="btn primary" onclick="app.pickAgain()">${esc(S.needsPicker.button)}</button></div>`
@@ -348,7 +348,13 @@ const app = {
       }
       const port = await requestPort([b.usb.app.vid, b.usb.boot && b.usb.boot.vid]);
       S.portObj = port; S.busy = true; render();
-      if (b.platform === PLATFORM.NRF52) await enterBootloader(port); else { S.portLabel = 'USB ' + infoLabel(portInfo(port)); S.portSub = `${b.mcu} · will enter download mode when flashing`; }
+      if (b.platform === PLATFORM.NRF52) {
+        const info = portInfo(port);
+        if (b.usb.boot && info.vid === b.usb.boot.vid && info.pid === b.usb.boot.pid) {
+          // Already in the bootloader (double-tap reset) — one pick is enough.
+          S.bootPort = port; S.portLabel = 'USB ' + infoLabel(info) + ' (bootloader)'; S.portSub = 'Adafruit nRF52 DFU · ready to flash'; log('Bootloader picked directly — skipping the 1200-baud touch', 'ok');
+        } else await enterBootloader(port);
+      } else { S.portLabel = 'USB ' + infoLabel(portInfo(port)); S.portSub = `${b.mcu} · will enter download mode when flashing`; }
       S.busy = false; render();
     } catch (e) { if (e && e.name === 'NotFoundError') { S.busy = false; render(); return; } fail(e); }
   },
