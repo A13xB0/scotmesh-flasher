@@ -19,7 +19,7 @@ const S = {
   busy: false, error: null, progress: { pct: 0, text: '' }, checklist: [],
   transport: null, rnode: null, portLabel: null, portObj: null, needsPicker: null,
   flashed: false, provisioned: false, provInfo: null, erase: false,
-  cfg: { profile: 'sm868', custom: { freq: 867.5, bw: 125, sf: 9, cr: 5, txp: 22 }, name: '', mode: 'full', transport: true, ids: [], ble: true, wifi: false, ssid: '', psk: '' },
+  cfg: { profile: 'sm868', custom: { freq: 869.4625, bw: 125, sf: 9, cr: 5, txp: 22 }, name: '', mode: 'full', transport: true, ids: [], ble: true, wifi: false, ssid: '', psk: '' },
   result: null, btPin: null,
 };
 try { const saved = JSON.parse(localStorage.getItem('scotmesh.flasher.v1') || 'null'); if (saved && saved.cfg) { Object.assign(S.cfg, saved.cfg); } } catch (_) {}

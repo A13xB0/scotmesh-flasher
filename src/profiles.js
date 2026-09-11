@@ -2,7 +2,7 @@
 // stay in step with the wiki's RNode page. Both use 125 kHz and coding
 // rate 4/5. txp is capped at the board's maximum by the UI.
 export const PROFILES = [
-  { id: 'sm868', name: 'ScotMesh 868', band: '868', freq: 867500000, bw: 125000, sf: 9, cr: 5, txp: 22,
+  { id: 'sm868', name: 'ScotMesh 868', band: '868', freq: 869462500, bw: 125000, sf: 9, cr: 5, txp: 22,
     why: 'Default for the Scottish backbone and most nodes. Use this unless you know why not.' },
   { id: 'sm433', name: 'ScotMesh 433', band: '433', freq: 433775000, bw: 125000, sf: 8, cr: 5, txp: 7,
     why: 'Low-band profile. Long range at low power; 7 dBm keeps it within the licence limit.' },
