@@ -44,7 +44,7 @@ window.toggleDrawer = () => { const d = $('#drawer'); d.classList.toggle('open')
 function go(n) { S.step = n; S.error = null; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function fail(e) { S.busy = false; S.error = (e && e.message) || String(e); log(S.error, 'err'); render(); }
 function setProgress(pct, text) { S.progress = { pct, text }; const bar = $('#pbar'), pt = $('#ptext'), pp = $('#ppct'); if (bar) bar.style.width = pct + '%'; if (pt) pt.textContent = text || ''; if (pp) pp.textContent = Math.round(pct) + '%'; }
-function check(i, state, detail) { const li = document.querySelectorAll('#checklist li')[i]; if (!li) return; li.className = state; li.querySelector('.st').textContent = state === 'ok' ? '✓' : state === 'err' ? '!' : ''; if (detail != null) li.querySelector('.det').textContent = detail; }
+function check(i, state, detail) { if (S.checklist[i]) { S.checklist[i].state = state; if (detail != null) S.checklist[i].detail = detail; } const li = document.querySelectorAll('#checklist li')[i]; if (!li) return; li.className = state; li.querySelector('.st').textContent = state === 'ok' ? '✓' : state === 'err' ? '!' : ''; if (detail != null) li.querySelector('.det').textContent = detail; }
 const skipped = (i) => S.path === 'reconfig' && [1, 2, 4, 5].includes(i);
 const copyTxt = (txt, btn) => { try { navigator.clipboard.writeText(txt); } catch (_) {} const o = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => btn.textContent = o, 1200); };
 window.copyTxt = copyTxt;
@@ -342,7 +342,8 @@ const app = {
         await attach(t);
         const info = await handshake();
         S.portLabel = t.name; S.portSub = `microReticulum ${info.fwVersion} · board 0x${info.board.toString(16)} · ${info.transportMode ? 'transport node' : 'host mode'}`;
-        if (!S.board && info.boardId) { S.board = info.boardId; S.band = Object.keys(board().models)[0]; }
+        if (!S.board) { S.board = info.boardId || 'unknown'; const ks = Object.keys(board().models); S.band = ks.length === 1 ? ks[0] : S.band; }
+        if (info.transportMode) await loadCurrentConfig();
         S.busy = false; render(); return;
       }
       const port = await requestPort([b.usb.app.vid, b.usb.boot && b.usb.boot.vid]);
@@ -357,7 +358,6 @@ const app = {
       const port = await requestPort([b.usb.boot ? b.usb.boot.vid : b.usb.app.vid, b.usb.app.vid]);
       const info = portInfo(port);
       if (S.needsPicker && S.needsPicker.kind === 'boot') { S.bootPort = port; S.portLabel = 'USB ' + infoLabel(info) + ' (bootloader)'; S.portSub = 'Adafruit nRF52 DFU · ready to flash'; S.needsPicker = null; log('Bootloader port selected: ' + infoLabel(info), 'ok'); render(); return; }
-      if (S.needsPicker && S.needsPicker.kind === 'app') { const t = new SerialTransport(port); await t.open(115200); S.needsPicker = null; await S.needsPicker_resume(t); return; }
     } catch (e) { if (e && e.name === 'NotFoundError') return; fail(e); }
   },
   async flash() {
@@ -527,7 +527,7 @@ async function handshake() {
   let ok = false; for (let i = 0; i < 6 && !ok; i++) { ok = await rn.detect(); if (!ok) await sleep(500); }
   if (!ok) throw new Error('the device did not answer the RNode handshake');
   const fwVersion = await rn.firmwareVersion(); let bd = 0; try { bd = await rn.board(); } catch (_) {}
-  let transportMode = false; try { await rn.getInfo(); transportMode = true; } catch (_) {}
+  let transportMode = false; try { await rn.getInfo(2000); transportMode = true; } catch (_) {}
   const boardId = { 0x53: 'seeed_p1', 0x51: 'rak4631', 0x44: 'techo', 0x3E: 'xiao_s3', 0x3A: 'heltec_v3', 0x3F: 'heltec_v4', 0x38: 'heltec_v2', 0x45: 'heltec_tracker_v2', 0x42: 't3s3', 0x33: 'tbeam', 0x3D: 'tbeam_supreme', 0x3B: 'tdeck', 0x37: 'lora32v21', 0x36: 'lora32v20', 0x39: 'lora32v10', 0x41: 'ng21', 0x40: 'ng20', 0x3C: 'heltec_t114' }[bd];
   log(`Device: firmware ${fwVersion}, board 0x${bd.toString(16)}${transportMode ? ', provisioning available' : ''}`, 'ok');
   return { fwVersion, board: bd, boardId, transportMode };
@@ -546,11 +546,36 @@ async function enterBootloader(port) {
   S.needsPicker = { kind: 'boot', title: 'Now pick the bootloader device', text: `The board should have reappeared as ${b.usb.boot ? infoLabel(b.usb.boot) : 'a new device'}. The browser needs permission for it once.`, button: 'Select bootloader port' };
   log('Bootloader is a new USB device — asking for permission', 'wn');
 }
+// Reconfigure: show what the node has now rather than the defaults.
+async function loadCurrentConfig() {
+  const rn = S.rnode; const c = S.cfg;
+  try {
+    const st = await rn.getState([NS.RNS_GENERAL, NS.RNODE_GENERAL, NS.IFACE_LORA]);
+    const g = st[NS.RNS_GENERAL] || {}, r = st[NS.RNODE_GENERAL] || {}, lo = st[NS.IFACE_LORA] || {};
+    if (g[F.TRANSPORT] != null) c.transport = !!g[F.TRANSPORT];
+    if (Array.isArray(g[F.RM_ALLOWED])) c.ids = g[F.RM_ALLOWED].filter(x => x instanceof Uint8Array && x.length === 16).map(hex);
+    if (typeof r[F.NN_NAME] === 'string') c.name = r[F.NN_NAME];
+    const modeName = Object.entries(LORA_MODE).find(([, v]) => v === r[F.LORA_MODE]); if (modeName) c.mode = ['full', 'ap', 'roaming'].includes(modeName[0]) ? modeName[0] : 'full';
+    if (lo[1]) {
+      const cur = { freq: lo[1], bw: lo[2], sf: lo[3], cr: lo[4], txp: lo[5] };
+      const match = PROFILES.find(p => p.freq === cur.freq && p.bw === cur.bw && p.sf === cur.sf && p.cr === cur.cr);
+      if (match) c.profile = match.id; else { c.profile = 'custom'; c.custom = { freq: cur.freq / 1e6, bw: cur.bw / 1e3, sf: cur.sf, cr: cur.cr, txp: cur.txp }; }
+      if (S.band == null) S.band = cur.freq > 600e6 ? '868' : '433';
+    }
+    persist(); log('Loaded the node’s current settings', 'ok');
+  } catch (e) { log('Could not read current settings: ' + e.message, 'wn'); }
+}
 // Reboot the device and get a fresh transport once it is back. Same VID:PID
 // before and after, so previously-granted ports are enough.
 async function rebootAndReconnect(doReset, timeoutMs = 25000) {
   const b = board(); const old = S.transport; const oldInfo = old && old.port ? portInfo(old.port) : null;
   await doReset(); await sleep(300);
+  if (old && old.device) {                       // Bluetooth: wait for the node to advertise again
+    S.transport = null; S.rnode = null; await sleep(3000);
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) { try { await old.reconnect(); await attach(old); log('Reconnected over Bluetooth', 'ok'); await sleep(800); return old; } catch (_) { await sleep(2000); } }
+    throw new Error('the node did not come back over Bluetooth — reconnect it and try again');
+  }
   disconnect(); await sleep(1500);
   const t = await waitForPort({ match: (i) => oldInfo ? (i.vid === oldInfo.vid) : (i.vid === b.usb.app.vid), timeoutMs, log });
   if (!t) throw new Error('the device did not come back after restarting — unplug and replug it, then press Try again');

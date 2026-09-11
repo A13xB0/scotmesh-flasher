@@ -7,7 +7,7 @@ export async function loadIndex() {
 }
 
 export async function download(url, expectedSize, onProgress) {
-  const r = await fetch(url, { cache: 'force-cache' });
+  const r = await fetch(url, { cache: 'default' });
   if (!r.ok) throw new Error(`download failed (${r.status})`);
   const total = Number(r.headers.get('content-length')) || expectedSize || 0;
   const reader = r.body.getReader(); const chunks = []; let got = 0;

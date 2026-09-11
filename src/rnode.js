@@ -139,7 +139,7 @@ export class RNode {
   async setState(state) { const b = await this.prov(OP.SetState, { 3: state }); return { fieldErrors: b && b[3] }; }
   async commit(nsIds) { const b = await this.prov(OP.Commit, { 1: nsIds }, 12000); return { applied: b && b[1], needsReboot: !!(b && b[2]) }; }
   async rebootOp() { try { await this.prov(OP.Reboot, undefined, 1500); } catch (_) { /* it reboots before answering */ } }
-  async getInfo() { return await this.prov(OP.GetInfo, undefined, 4000); }
+  async getInfo(timeout = 4000) { return await this.prov(OP.GetInfo, undefined, timeout); }
 }
 
 export const hex = (u8) => Array.from(u8 || [], b => b.toString(16).padStart(2, '0')).join('');

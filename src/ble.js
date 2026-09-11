@@ -16,6 +16,15 @@ export class BLETransport {
     tx.addEventListener('characteristicvaluechanged', (ev) => { const v = ev.target.value; this.onBytes(new Uint8Array(v.buffer, v.byteOffset, v.byteLength)); });
     await tx.startNotifications();
   }
+  async reconnect() {
+    if (!this.device) throw new Error('no device');
+    const server = await this.device.gatt.connect();
+    const svc = await server.getPrimaryService(NUS);
+    this.rx = await svc.getCharacteristic(NUS_RX);
+    const tx = await svc.getCharacteristic(NUS_TX);
+    tx.addEventListener('characteristicvaluechanged', (ev) => { const v = ev.target.value; this.onBytes(new Uint8Array(v.buffer, v.byteOffset, v.byteLength)); });
+    await tx.startNotifications();
+  }
   async send(bytes) {
     for (let i = 0; i < bytes.length; i += 20) {      // 20-byte writes are safe on every stack
       const chunk = bytes.subarray(i, i + 20);

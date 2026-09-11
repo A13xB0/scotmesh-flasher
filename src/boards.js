@@ -209,6 +209,10 @@ export const BOARDS = [
   },
 ];
 
+// Fallback for "Reconfigure" when the board code is not in the catalogue.
+BOARDS.push({ id: 'unknown', name: 'RNode (board not in catalogue)', vendor: '', mcu: '', radio: 'LoRa', platform: PLATFORM.ESP32, maxTxDbm: 22,
+  product: 0, models: { '868': 0, '433': 0 }, paths: [], families: {}, usb: { app: {} }, hasBle: true, hasWifi: false, hasBattery: true });
+
 export const BAND_LABEL = { '433': '433 MHz (410–525 MHz)', '868': '868 MHz (820–1020 MHz)' };
 
 export function boardById(id) { return BOARDS.find(b => b.id === id); }
