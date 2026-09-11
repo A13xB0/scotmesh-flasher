@@ -5,7 +5,7 @@ import { md5hex } from './md5.js';
 import { sleep } from './serial.js';
 import { DfuSerial, dfuTouch } from './nrfdfu.js';
 
-export async function flashEsp32({ port, board, espFiles, files, log, progress }) {
+export async function flashEsp32({ port, board, espFiles, files, log, progress, eraseAll = false }) {
   const fileArray = [];
   for (const [addr, name] of Object.entries(espFiles || board.esp.files)) {
     const data = files[name];
@@ -23,7 +23,7 @@ export async function flashEsp32({ port, board, espFiles, files, log, progress }
     log(`esptool: connected — ${chip}`, 'ok');
     let cur = 0;
     await loader.writeFlash({
-      fileArray, flashSize: board.esp.flashSize, flashMode: 'dio', flashFreq: '80m', eraseAll: false, compress: true,
+      fileArray, flashSize: board.esp.flashSize, flashMode: 'dio', flashFreq: '80m', eraseAll, compress: true,
       calculateMD5Hash: (image) => md5hex(latin1(image)),
       reportProgress: (idx, written, total) => {
         if (idx !== cur) { cur = idx; }

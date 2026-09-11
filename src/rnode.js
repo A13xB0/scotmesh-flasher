@@ -11,7 +11,7 @@ export const CMD = {
   STAT_BAT: 0x27, BT_CTRL: 0x46, BOARD: 0x47, PLATFORM: 0x48, MCU: 0x49, FW_VERSION: 0x50, ROM_READ: 0x51,
   ROM_WRITE: 0x52, CONF_SAVE: 0x53, CONF_DELETE: 0x54, RESET: 0x55, FW_HASH: 0x58, UNLOCK_ROM: 0x59,
   HASHES: 0x60, BT_PIN: 0x62, WIFI_MODE: 0x6A, WIFI_SSID: 0x6B, WIFI_PSK: 0x6C, BT_UNPAIR: 0x70,
-  LOG: 0x80, PROVISION_REQ: 0x86, PROVISION_RSP: 0x87, ERROR: 0x90,
+  LOG: 0x80, PROVISION_REQ: 0x86, PROVISION_RSP: 0x87, SM_RESET: 0x8A, ERROR: 0x90,
 };
 export const ROM = { PRODUCT: 0x00, MODEL: 0x01, HW_REV: 0x02, SERIAL: 0x03, MADE: 0x07, CHKSUM: 0x0B, SIGNATURE: 0x1B, INFO_LOCK: 0x9B, INFO_LOCK_BYTE: 0x73, CONF_OK: 0x9C, CONF_OK_BYTE: 0x73 };
 export const OP = { GetSchema: 1, GetInfo: 2, GetCapabilities: 3, GetState: 4, SetState: 5, Commit: 6, Discard: 7, FactoryReset: 8, Reboot: 9, Error: 101 };
@@ -94,6 +94,10 @@ export class RNode {
   async hashes(type) { const r = await this.query(CMD.HASHES, [type], 2000); return r.length >= 33 ? r.slice(1, 33) : null; }
   async setFirmwareHash(hash32) { await this.write(CMD.FW_HASH, hash32); await sleep(150); }
   async reset() { try { await this.write(CMD.RESET, [0xF8]); } catch (_) {} }
+  // ScotMesh microReticulum only: forget identity, routes, settings and admins, then restart.
+  async fullReset() { try { await this.write(CMD.SM_RESET, [0xF8]); } catch (_) {} }
+  // Wipe the RNode EEPROM (rnodeconf --eeprom-wipe): the device restarts unprovisioned.
+  async wipeEeprom() { try { await this.write(CMD.UNLOCK_ROM, [0xF8]); } catch (_) {} }
   async battery() {
     // [state, percent]; state 0 = discharging/unknown, 1 = charging, 2 = charged
     try { const r = await this.query(CMD.STAT_BAT, [0], 1500); return { state: r[0], percent: r[1] }; } catch { return null; }

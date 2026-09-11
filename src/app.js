@@ -18,7 +18,7 @@ const S = {
   pkg: null,                                        // { bytes, files, hash (Uint8Array), hashKind }
   busy: false, error: null, progress: { pct: 0, text: '' }, checklist: [],
   transport: null, rnode: null, portLabel: null, portObj: null, needsPicker: null,
-  flashed: false, provisioned: false, provInfo: null,
+  flashed: false, provisioned: false, provInfo: null, erase: false,
   cfg: { profile: 'sm868', custom: { freq: 867.5, bw: 125, sf: 9, cr: 5, txp: 22 }, name: '', mode: 'full', transport: true, ids: [], ble: true, wifi: false, ssid: '', psk: '' },
   result: null, btPin: null,
 };
@@ -200,6 +200,7 @@ V[4] = () => {
     <div class="eyebrow">Step 5 · Flash</div>
     <h2>${S.flashed ? 'Firmware written.' : 'Ready to write the firmware.'}</h2>
     <p class="lead">Leave the cable in and don’t touch the board until this finishes. ${b.platform === PLATFORM.NRF52 ? 'About a minute.' : 'About a minute and a half.'}</p>
+    ${S.flashed ? '' : `<label class="check" style="display:flex;gap:10px;align-items:flex-start;margin:0 0 14px"><input type="checkbox" id="erase" ${S.erase ? 'checked' : ''} onchange="app.setErase(this.checked)" ${S.busy ? 'disabled' : ''}><span><b>Start from scratch: erase everything first.</b><br><span class="small">Wipes the node's identity, settings, admin list, routes and the RNode EEPROM, so it comes back with new addresses and is set up again from step 6. Leave this off to keep an existing node's identity across an update.${family() !== 'microreticulum' && b.platform === PLATFORM.NRF52 ? ' Not available for RNode firmware on this board.' : ''}</span></span></label>`}
     ${progressBox(esc(S.fw.asset) + ' · ' + esc(S.fw.tag))}
     ${errorBox()}
     ${hood(b.platform === PLATFORM.NRF52 ? ['Uses <code>nrf52_dfu_flasher.js</code> (liamcottle) — a WebSerial port of <code>adafruit-nrfutil dfu serial</code>: SLIP-framed HCI packets, the init packet from the zip, 512-byte data packets.', 'The bootloader activates the image and resets; the page then waits for the application USB device and sends <code>CMD_FW_VERSION</code>.'] : ['<code>esptool-js 0.4.5</code>: connect → detect chip → <code>writeFlash</code> for each segment at the catalogue offset, MD5-verified, then a DTR reset.', 'Then the same <code>CMD_FW_VERSION</code> handshake as nRF52.'])}
@@ -381,11 +382,13 @@ const app = {
       if (S.needsPicker && S.needsPicker.kind === 'boot') { S.bootPort = port; S.portLabel = 'USB ' + infoLabel(info) + ' (bootloader)'; S.portSub = 'Adafruit nRF52 DFU · ready to flash'; S.needsPicker = null; log('Bootloader port selected: ' + infoLabel(info), 'ok'); render(); return; }
     } catch (e) { if (e && e.name === 'NotFoundError') return; fail(e); }
   },
+  setErase(v) { S.erase = !!v; render(); },
   async flash() {
     const b = board(); S.busy = true; S.error = null; S.progress = { pct: 0, text: 'Starting…' };
+    const eraseNrf = S.erase && b.platform === PLATFORM.NRF52;
     S.checklist = b.platform === PLATFORM.NRF52
-      ? [{ text: 'Send init packet (SoftDevice check)' }, { text: 'Write application' }, { text: 'Wait for the board to come back' }, { text: 'Confirm firmware version' }].map(c => ({ ...c, state: 'pend' }))
-      : [{ text: 'Enter download mode and detect chip' }, { text: 'Write bootloader, partitions, boot_app0' }, { text: 'Write application and console image' }, { text: 'Reset and wait for the board' }, { text: 'Confirm firmware version' }].map(c => ({ ...c, state: 'pend' }));
+      ? [{ text: 'Send init packet (SoftDevice check)' }, { text: 'Write application' }, { text: 'Wait for the board to come back' }, { text: 'Confirm firmware version' }, ...(eraseNrf ? [{ text: 'Erase: new identity, then wipe the EEPROM' }] : [])].map(c => ({ ...c, state: 'pend' }))
+      : [{ text: S.erase ? 'Enter download mode, detect chip, erase the whole flash' : 'Enter download mode and detect chip' }, { text: 'Write bootloader, partitions, boot_app0' }, { text: family() === 'microreticulum' ? 'Write application' : 'Write application and console image' }, { text: 'Reset and wait for the board' }, { text: 'Confirm firmware version' }].map(c => ({ ...c, state: 'pend' }));
     render();
     try {
       if (b.platform === PLATFORM.NRF52) {
@@ -399,16 +402,33 @@ const app = {
         await attach(t); check(2, 'ok', t.name); await sleep(800);
       } else {
         check(0, 'run');
-        await flashEsp32({ port: S.portObj, board: b, espFiles: espFiles(b), files: S.pkg.files, log, progress: (pct, msg) => { check(0, 'ok', 'connected'); if (pct < 60) check(1, 'run'); else { check(1, 'ok'); check(2, 'run'); } setProgress(pct * 0.9, msg); } });
+        await flashEsp32({ port: S.portObj, board: b, espFiles: espFiles(b), files: S.pkg.files, log, eraseAll: S.erase, progress: (pct, msg) => { check(0, 'ok', 'connected'); if (pct < 60) check(1, 'run'); else { check(1, 'ok'); check(2, 'run'); } setProgress(pct * 0.9, msg); } });
         check(2, 'ok'); check(3, 'run'); setProgress(92, 'Waiting for the board to reboot…');
         await sleep(1500);
         const t = await waitForPort({ match: (i) => i.vid === b.usb.app.vid, timeoutMs: 20000, log });
         if (!t) throw new Error('the board did not come back after the reset — unplug and replug it, then press Try again');
         await attach(t); check(3, 'ok', t.name);
       }
-      const last = S.checklist.length - 1; check(last, 'run');
-      const info = await handshakeAfterReboot();
-      check(last, 'ok', info.fwVersion); setProgress(100, `Device answered: firmware ${info.fwVersion}`);
+      const last = eraseNrf ? S.checklist.length - 2 : S.checklist.length - 1; check(last, 'run');
+      let info = await handshakeAfterReboot();
+      check(last, 'ok', info.fwVersion);
+      if (eraseNrf) {
+        // The nRF52 bootloader only writes the application, so the erase happens in the
+        // firmware: a ScotMesh full reset (new identity; restarts), then an EEPROM wipe
+        // (the device restarts unprovisioned and step 6 provisions it again).
+        check(last + 1, 'run'); setProgress(94, 'Erasing the node’s identity and settings…');
+        const comeBack = async (what) => {
+          await sleep(1500);
+          const t = await waitForPort({ match: (i) => i.vid === b.usb.app.vid && i.pid !== (b.usb.boot && b.usb.boot.pid), timeoutMs: 25000, log });
+          if (!t) throw new Error(`the board did not come back after the ${what} — unplug and replug it, then press Try again`);
+          await attach(t); await sleep(800); return await handshakeAfterReboot();
+        };
+        if (family() === 'microreticulum') { await S.rnode.fullReset(); log('Full reset sent: new identity, routes and settings cleared', 'ok'); await comeBack('full reset'); }
+        await S.rnode.wipeEeprom(); log('EEPROM wiped', 'ok'); setProgress(97, 'Wiping the EEPROM…');
+        info = await comeBack('EEPROM wipe');
+        check(last + 1, 'ok', 'fresh device');
+      }
+      setProgress(100, `Device answered: firmware ${info.fwVersion}`);
       S.portLabel = S.transport.name; S.portSub = `firmware ${info.fwVersion}`;
       S.flashed = true; S.busy = false; render();
     } catch (e) { fail(e); }
