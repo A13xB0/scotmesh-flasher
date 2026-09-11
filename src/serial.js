@@ -46,6 +46,24 @@ export class SerialTransport {
   }
 }
 
+// Wait until a port we hold is actually gone (device reset/unplugged), via the
+// navigator.serial 'disconnect' event or its absence from getPorts().
+export async function waitForGone(port, timeoutMs = 8000) {
+  if (!port) return true;
+  const deadline = Date.now() + timeoutMs;
+  let kick = null;
+  const onDisc = (ev) => { if (ev.target === port && kick) kick(); };
+  navigator.serial.addEventListener('disconnect', onDisc);
+  try {
+    while (Date.now() < deadline) {
+      let ports = []; try { ports = await navigator.serial.getPorts(); } catch (_) {}
+      if (!ports.includes(port)) return true;
+      await Promise.race([sleep(250), new Promise(r => { kick = r; })]); kick = null;
+    }
+    return false;
+  } finally { navigator.serial.removeEventListener('disconnect', onDisc); }
+}
+
 // Ask the user for a port. `vendors` narrows the browser's picker.
 export async function requestPort(vendors) {
   const filters = (vendors || []).filter(v => v != null).map(v => ({ usbVendorId: v }));

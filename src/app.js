@@ -2,7 +2,7 @@
 // function; device work happens in the action functions below.
 import { BOARDS, BAND_LABEL, PLATFORM, boardById, boardsFor } from './boards.js';
 import { PROFILES, profileFor, describe } from './profiles.js';
-import { SerialTransport, requestPort, waitForPort, portInfo, infoLabel, sleep } from './serial.js';
+import { SerialTransport, requestPort, waitForPort, waitForGone, portInfo, infoLabel, sleep } from './serial.js';
 import { RNode, ROM, NS, F, LORA_MODE, hex, fromHex, bytesEqual } from './rnode.js';
 import { BLETransport } from './ble.js';
 import { loadIndex, download, sha256hex, sha256, unzip, espImageHash, nrfApplication } from './firmware.js';
@@ -392,7 +392,7 @@ const app = {
         S.bootPort = null;
         const t = await waitForPort({ match: (i) => i.vid === b.usb.app.vid && i.pid !== (b.usb.boot && b.usb.boot.pid), timeoutMs: 20000, log });
         if (!t) throw new Error('the board did not reappear as an application device — unplug and replug it, then press Try again');
-        await attach(t); check(2, 'ok', t.name);
+        await attach(t); check(2, 'ok', t.name); await sleep(800);
       } else {
         check(0, 'run');
         await flashEsp32({ port: S.portObj, board: b, files: S.pkg.files, log, progress: (pct, msg) => { check(0, 'ok', 'connected'); if (pct < 60) check(1, 'run'); else { check(1, 'ok'); check(2, 'run'); } setProgress(pct * 0.9, msg); } });
@@ -403,7 +403,7 @@ const app = {
         await attach(t); check(3, 'ok', t.name);
       }
       const last = S.checklist.length - 1; check(last, 'run');
-      const info = await handshake();
+      const info = await handshakeAfterReboot();
       check(last, 'ok', info.fwVersion); setProgress(100, `Device answered: firmware ${info.fwVersion}`);
       S.portLabel = S.transport.name; S.portSub = `firmware ${info.fwVersion}`;
       S.flashed = true; S.busy = false; render();
@@ -454,8 +454,8 @@ const app = {
       if (actual2 && !bytesEqual(actual2, stored)) throw new Error('device hash and stored hash still differ');
       check(3, 'ok', 'match ✓'); setProgress(88);
       check(4, 'run'); log('CMD_RESET', 'tx');
-      const t = await rebootAndReconnect(() => rn.reset());
-      const info = await handshake();
+      await rebootAndReconnect(() => rn.reset());
+      const info = await handshakeAfterReboot();
       check(4, 'ok', `firmware ${info.fwVersion}`); setProgress(100, 'Provisioned and verified');
       S.provisioned = true; S.provInfo = info; S.busy = false; render();
     } catch (e) { fail(e); }
@@ -484,8 +484,8 @@ const app = {
         check(0, 'ok', describe(rf)); setProgress(15); result.radio = rf;
         check(1, 'run'); await rn.saveBootIntoTransport(); check(1, 'ok', 'CMD_CONF_SAVE'); setProgress(22);
         check(2, 'run'); log('Restarting into transport mode', 'tx');
-        await rebootAndReconnect(() => rn.reset(), 40000); rn = S.rnode;
-        const info = await handshake(); check(2, 'ok', info.transportMode ? 'transport mode' : 'answered'); setProgress(40);
+        await rebootAndReconnect(() => rn.reset(), 40000);
+        const info = await handshakeAfterReboot(); rn = S.rnode; check(2, 'ok', info.transportMode ? 'transport mode' : 'answered'); setProgress(40);
         check(3, 'run');
         // Wait for the provisioning subsystem: the RNS stack takes a few seconds to start on nRF52.
         let state = null; for (let i = 0; i < 12 && !state; i++) { try { state = await rn.getState([NS.RNS_GENERAL]); } catch (e) { await sleep(1500); } }
@@ -502,8 +502,8 @@ const app = {
         if (b.hasWifi) await rn.wifi({ mode: c.wifi ? 1 : 0, ssid: c.ssid, psk: c.psk });
         check(4, 'ok'); setProgress(68);
         check(5, 'run'); log('Restarting to apply', 'tx');
-        await rebootAndReconnect(() => rn.rebootOp().then(() => rn.reset()), 40000); rn = S.rnode;
-        await handshake();
+        await rebootAndReconnect(() => rn.rebootOp().then(() => rn.reset()), 40000);
+        await handshakeAfterReboot(); rn = S.rnode;
         let m = null; for (let i = 0; i < 12 && !m; i++) { try { m = await rn.getState([NS.METRICS, NS.METRICS_DEV, NS.IFACE_LORA]); } catch (e) { await sleep(1500); } }
         if (m) {
           const mm = m[NS.METRICS] || {}, dv = m[NS.METRICS_DEV] || {}, lo = m[NS.IFACE_LORA] || {};
@@ -541,7 +541,7 @@ async function attach(t) {
 function disconnect() { if (S.transport) { const t = S.transport; S.transport = null; S.rnode = null; t.close().catch(() => {}); } }
 async function handshake() {
   const rn = S.rnode; if (!rn) throw new Error('not connected');
-  let ok = false; for (let i = 0; i < 6 && !ok; i++) { ok = await rn.detect(); if (!ok) await sleep(500); }
+  let ok = false; for (let i = 0; i < 8 && !ok; i++) { if (!S.transport) throw new Error('the port closed during the handshake'); ok = await rn.detect(); if (!ok) await sleep(500); }
   if (!ok) throw new Error('the device did not answer the RNode handshake');
   const fwVersion = await rn.firmwareVersion(); let bd = 0; try { bd = await rn.board(); } catch (_) {}
   let transportMode = false; try { await rn.getInfo(2000); transportMode = true; } catch (_) {}
@@ -593,12 +593,35 @@ async function rebootAndReconnect(doReset, timeoutMs = 25000) {
     while (Date.now() < deadline) { try { await old.reconnect(); await attach(old); log('Reconnected over Bluetooth', 'ok'); await sleep(800); return old; } catch (_) { await sleep(2000); } }
     throw new Error('the node did not come back over Bluetooth — reconnect it and try again');
   }
-  disconnect(); await sleep(1500);
-  const t = await waitForPort({ match: (i) => oldInfo ? (i.vid === oldInfo.vid) : (i.vid === b.usb.app.vid), timeoutMs, log });
+  const oldPort = old && old.port;
+  disconnect();
+  // Wait for the USB device to actually drop off before looking for it again,
+  // otherwise we reopen the old port and it vanishes underneath us.
+  const gone = await waitForGone(oldPort, 8000);
+  log(gone ? 'Device went away for the restart' : 'Device did not disconnect within 8 s — it may not have restarted', gone ? 'dim' : 'wn');
+  await sleep(gone ? 800 : 200);
+  const match = (i) => oldInfo && oldInfo.vid != null ? (i.vid === oldInfo.vid) : (i.vid === b.usb.app.vid);
+  const t = await waitForPort({ match, timeoutMs, log });
   if (!t) throw new Error('the device did not come back after restarting — unplug and replug it, then press Try again');
   await attach(t); log('Reconnected on ' + t.name, 'ok');
   await sleep(800);
   return t;
+}
+// The board may still be booting (or reset once more) right after it
+// reappears; if the port drops during the handshake, wait for it again.
+async function handshakeAfterReboot(timeoutMs = 25000) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try { return await handshake(); }
+    catch (e) {
+      if (S.transport) throw e;                       // port still open: a real handshake failure
+      log(`Port dropped during handshake (attempt ${attempt}) — waiting for the device again`, 'wn');
+      const b = board();
+      const t = await waitForPort({ match: (i) => i.vid === b.usb.app.vid, timeoutMs, log });
+      if (!t) throw new Error('the device did not come back after restarting — unplug and replug it, then press Try again');
+      await attach(t); await sleep(800);
+    }
+  }
+  throw new Error('the device kept disconnecting during the handshake');
 }
 async function signChunk(chunk) {
   // rnodeconf writes a 128-byte RSA-PSS signature here. Only rnodeconf ever
