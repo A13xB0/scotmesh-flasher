@@ -154,7 +154,7 @@ V[2] = () => {
 };
 
 V[3] = () => {
-  const b = board(); const nrf = b.platform === PLATFORM.NRF52; const rc = S.path === 'reconfig';
+  const b = board(); const nrf = !!b && b.platform === PLATFORM.NRF52; const rc = S.path === 'reconfig';
   return `
   <section class="card">
     <div class="eyebrow">Step 4 · Connect</div>
@@ -611,7 +611,11 @@ function selectLatest() {
 }
 
 // ---------- render ----------
-function render() { renderRail(); $('#main').innerHTML = V[S.step](); }
+function render() {
+  renderRail();
+  try { $('#main').innerHTML = V[S.step](); }
+  catch (e) { console.error(e); $('#main').innerHTML = `<section class="card"><div class="errbox"><b>The page hit a bug rendering step ${S.step + 1}.</b> ${esc(e.message)} <span class="small">Please report this with the log.</span></div><div class="actions"><button class="btn" onclick="app.reset()">Start over</button></div></section>`; log('render error: ' + (e.stack || e.message), 'err'); }
+}
 render();
 log(supported() ? 'ScotMesh Flasher ready · WebSerial available' : 'WebSerial is not available in this browser', supported() ? '' : 'wn');
 ensureIndex();
