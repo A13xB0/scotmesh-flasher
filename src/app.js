@@ -13,7 +13,7 @@ const STEPS = ['Start', 'Hardware', 'Firmware', 'Connect', 'Flash', 'Provision',
 const FAMILY_FOR = { rnode: 'rnode', node: 'microreticulum', reconfig: 'microreticulum' };
 
 const S = {
-  step: 0, path: null, board: null, band: null, filter: 'all',
+  drawerTab: 'app', step: 0, path: null, board: null, band: null, filter: 'all',
   index: null, indexError: null, fw: null,          // fw = { tag, asset, size, sha256 }
   pkg: null,                                        // { bytes, files, hash (Uint8Array), hashKind }
   busy: false, error: null, progress: { pct: 0, text: '' }, checklist: [],
@@ -40,6 +40,17 @@ export function log(msg, cls = '') {
   $('#loglast').textContent = msg;
   if (cls === 'err') console.error(msg); else console.log(msg);
 }
+let devCount = 0;
+export function devlog(line) {
+  const pre = $('#devlog'); if (!pre) return;
+  const t = new Date().toTimeString().slice(0, 8);
+  pre.insertAdjacentHTML('beforeend', `<span class="t">${t}</span> ${esc(line)}\n`);
+  if (pre.childElementCount > 4000) pre.removeChild(pre.firstChild);
+  const atBottom = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 60; if (atBottom) pre.scrollTop = pre.scrollHeight;
+  devCount++; const c = $('#devcount'); if (c) c.textContent = devCount;
+  if (S.drawerTab !== 'dev') $('#loglast').textContent = 'device: ' + line;
+}
+window.drawerTab = (tab) => { S.drawerTab = tab; document.querySelectorAll('#drawer .tab').forEach(b => b.classList.toggle('on', b.dataset.tab === tab)); $('#log').hidden = tab !== 'app'; $('#devlog').hidden = tab !== 'dev'; const d = $('#drawer'); if (!d.classList.contains('open')) toggleDrawer(); };
 window.toggleDrawer = () => { const d = $('#drawer'); d.classList.toggle('open'); $('#logtoggle').textContent = d.classList.contains('open') ? '▼ hide' : '▲ show'; };
 function go(n) { S.step = n; S.error = null; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function fail(e) { S.busy = false; S.error = (e && e.message) || String(e); log(S.error, 'err'); render(); }
@@ -524,7 +535,7 @@ window.app = app;
 // ---------- device plumbing ----------
 async function attach(t) {
   disconnect();
-  S.transport = t; S.rnode = new RNode(t, log);
+  S.transport = t; S.rnode = new RNode(t, log); S.rnode.onDeviceText = devlog;
   t.onClose = () => { if (S.transport === t) { log('Device disconnected'); S.transport = null; S.rnode = null; } };
 }
 function disconnect() { if (S.transport) { const t = S.transport; S.transport = null; S.rnode = null; t.close().catch(() => {}); } }

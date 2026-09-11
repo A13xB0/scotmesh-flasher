@@ -35,11 +35,15 @@ export function kissEncode(cmd, payload) {
 }
 
 class KissDecoder {
-  constructor(onFrame) { this.onFrame = onFrame; this.buf = null; this.esc = false; }
+  constructor(onFrame, onRaw = () => {}) { this.onFrame = onFrame; this.onRaw = onRaw; this.buf = null; this.esc = false; this.raw = []; }
   feed(bytes) {
     for (const b of bytes) {
       if (b === FEND) { if (this.buf && this.buf.length) this.onFrame(this.buf[0], Uint8Array.from(this.buf.slice(1))); this.buf = []; this.esc = false; continue; }
-      if (!this.buf) continue;            // noise between frames (e.g. raw log text) is ignored
+      if (!this.buf) {                    // bytes between frames: the firmware's plain-text log
+        if (b === 0x0A) { if (this.raw.length) this.onRaw(new TextDecoder().decode(Uint8Array.from(this.raw)).replace(/\r$/, '')); this.raw = []; }
+        else if (b >= 0x20 || b === 0x09 || b === 0x0D) { this.raw.push(b); if (this.raw.length > 512) { this.onRaw(new TextDecoder().decode(Uint8Array.from(this.raw))); this.raw = []; } }
+        continue;
+      }
       if (this.esc) { this.buf.push(b === TFEND ? FEND : b === TFESC ? FESC : b); this.esc = false; }
       else if (b === FESC) this.esc = true;
       else this.buf.push(b);
@@ -52,12 +56,13 @@ export class RNode {
   constructor(transport, log = () => {}) {
     this.t = transport; this.log = log;
     this.pending = new Map(); this.listeners = new Map(); this.provWaiters = new Map(); this.seq = 1;
-    this.dec = new KissDecoder((c, p) => this._frame(c, p));
+    this.onDeviceText = () => {};
+    this.dec = new KissDecoder((c, p) => this._frame(c, p), (line) => this.onDeviceText(line));
     transport.onBytes = (b) => this.dec.feed(b);
   }
   _frame(cmd, payload) {
     if (cmd === CMD.PROVISION_RSP) { this._provResponse(payload); return; }
-    if (cmd === CMD.LOG) { this.log('device: ' + new TextDecoder().decode(payload).trim(), 'dim'); return; }
+    if (cmd === CMD.LOG) { this.onDeviceText(new TextDecoder().decode(payload).replace(/\r?\n$/, '')); return; }
     const q = this.pending.get(cmd);
     if (q && q.length) { const w = q.shift(); clearTimeout(w.timer); w.resolve(payload); }
     const l = this.listeners.get(cmd); if (l) for (const fn of l) fn(payload);

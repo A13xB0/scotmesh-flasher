@@ -243,7 +243,13 @@ textarea{resize:vertical;min-height:72px;font-family:"IBM Plex Mono",monospace;f
 /* log drawer */
 .drawer{position:fixed;left:0;right:0;bottom:0;background:var(--mono-bg);color:var(--mono-fg);border-top:1px solid var(--line);z-index:20;transition:height .2s;height:38px;overflow:hidden}
 .drawer.open{height:220px}
-.drawer .bar{display:flex;align-items:center;gap:12px;height:38px;padding:0 20px;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--mono-dim);cursor:pointer;user-select:none;border:0;background:none;width:100%;text-align:left}
+.drawer .bar{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px 0 20px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--mono-dim);user-select:none}
+.drawer .barmain{flex:1;display:flex;align-items:center;gap:12px;border:0;background:none;color:var(--mono-dim);font:inherit;text-align:left;cursor:pointer;min-width:0;height:38px}
+.drawer .tab{border:1px solid var(--line);background:none;color:var(--mono-dim);font:inherit;border-radius:6px;padding:3px 9px;cursor:pointer;white-space:nowrap}
+.drawer .tab.on{color:var(--mono-fg);border-color:var(--link);background:rgba(37,99,235,.15)}
+.drawer .tab .cnt{background:var(--line);color:var(--mono-fg);border-radius:999px;padding:0 6px;font-size:10.5px;margin-left:4px}
+.drawer.open{height:300px}
+.drawer pre{height:262px}
 .drawer .bar b{color:var(--mono-fg);font-weight:500}
 .drawer .bar .last{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;color:var(--mono-fg)}
 .drawer pre{margin:0;padding:6px 20px 12px;font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.55;height:182px;overflow:auto;white-space:pre-wrap}
@@ -308,8 +314,13 @@ textarea{resize:vertical;min-height:72px;font-family:"IBM Plex Mono",monospace;f
 </div>
 
 <div class="drawer" id="drawer">
-  <button class="bar" onclick="toggleDrawer()"><b>Log</b><span class="last" id="loglast">Ready.</span><span id="logtoggle">▲ show</span></button>
+  <div class="bar">
+    <button class="tab on" data-tab="app" onclick="drawerTab('app')">Flasher log</button>
+    <button class="tab" data-tab="dev" onclick="drawerTab('dev')">Device console <span class="cnt" id="devcount">0</span></button>
+    <button class="barmain" onclick="toggleDrawer()"><span class="last" id="loglast">Ready.</span><span id="logtoggle">▲ show</span></button>
+  </div>
   <pre id="log"></pre>
+  <pre id="devlog" hidden></pre>
 </div>
 
 <script src="lib/zip.min.js"></script>
