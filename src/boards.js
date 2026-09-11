@@ -34,7 +34,7 @@ export const BOARDS = [
     paths: ['node'],
     families: { microreticulum: 'rnode_firmware_seeed_solar_node_p1.zip', rnode: null },
     usb: { app: { vid: 0x2886, pid: 0x0059 }, boot: { vid: 0x2886, pid: 0x0044 } },
-    doubleTap: true, hasBle: true, hasWifi: false, hasBattery: true,
+    doubleTap: true, hasBle: true, hasWifi: false, hasBattery: true, ota: 'ble',
     resetHint: 'the small button beside the USB‑C port; the LED breathes slowly while the bootloader is active',
   },
   {
@@ -70,7 +70,7 @@ export const BOARDS = [
     paths: ['rnode', 'node'], families: both('xiao_esp32s3'),
     esp: esp('xiao_esp32s3', 0x0, '8MB'),
     usb: { app: { vid: 0x303A, pid: 0x1001 } },
-    hasBle: true, hasWifi: true, hasBattery: false,
+    hasBle: true, hasWifi: true, hasBattery: false, ota: 'wifi',
   },
   {
     id: 'heltec_v3', name: 'LoRa32 V3', vendor: 'Heltec',
@@ -79,7 +79,7 @@ export const BOARDS = [
     paths: ['rnode', 'node'], families: both('heltec32v3'),
     esp: esp('heltec32v3', 0x0, '8MB'),
     usb: { app: { vid: 0x10C4, pid: 0xEA60 } },
-    hasBle: true, hasWifi: true, hasBattery: true,
+    hasBle: true, hasWifi: true, hasBattery: true, ota: 'wifi',
   },
   {
     id: 'heltec_v4', name: 'LoRa32 V4 (PA)', vendor: 'Heltec',
@@ -88,7 +88,7 @@ export const BOARDS = [
     paths: ['rnode', 'node'], families: both('heltec32v4pa'),
     esp: esp('heltec32v4pa', 0x0, '16MB'),
     usb: { app: { vid: 0x10C4, pid: 0xEA60 } },
-    hasBle: true, hasWifi: true, hasBattery: true,
+    hasBle: true, hasWifi: true, hasBattery: true, ota: 'wifi',
   },
   {
     id: 'heltec_v2', name: 'LoRa32 V2', vendor: 'Heltec',
@@ -97,7 +97,7 @@ export const BOARDS = [
     paths: ['rnode', 'node'], families: both('heltec32v2'),
     esp: esp('heltec32v2', 0x1000, '8MB'),
     usb: { app: { vid: 0x10C4, pid: 0xEA60 } },
-    hasBle: true, hasWifi: false, hasBattery: false,
+    hasBle: true, hasWifi: false, hasBattery: false, ota: 'wifi',
   },
   {
     id: 'heltec_tracker_v2', name: 'Wireless Tracker V2', vendor: 'Heltec',
@@ -106,7 +106,7 @@ export const BOARDS = [
     paths: ['rnode', 'node'], families: { microreticulum: 'rnode_firmware_heltec_tracker_v2.zip', rnode: null },
     esp: esp('heltec_tracker_v2', 0x0, '8MB'),
     usb: { app: { vid: 0x303A, pid: 0x1001 } },
-    hasBle: true, hasWifi: true, hasBattery: true,
+    hasBle: true, hasWifi: true, hasBattery: true, ota: 'wifi',
   },
   {
     id: 't3s3', name: 'T3S3 (SX1262)', vendor: 'LilyGO',
@@ -149,18 +149,18 @@ export const BOARDS = [
     mcu: 'ESP32-S3', radio: 'SX1262 / SX1268', platform: PLATFORM.ESP32, maxTxDbm: 22,
     product: 0xEA, models: { '433': 0xDB, '868': 0xDC },
     paths: ['rnode', 'node'], families: both('tbeam_supreme'),
-    esp: esp('tbeam_supreme', 0x0, '4MB'),
+    esp: esp('tbeam_supreme', 0x0, '8MB'),       // firmware partition table is default_8MB.csv
     usb: { app: { vid: 0x303A, pid: 0x1001 } },
-    hasBle: true, hasWifi: true, hasBattery: true,
+    hasBle: true, hasWifi: true, hasBattery: true, ota: 'wifi',
   },
   {
     id: 'tdeck', name: 'T‑Deck', vendor: 'LilyGO',
     mcu: 'ESP32-S3', radio: 'SX1262 / SX1268', platform: PLATFORM.ESP32, maxTxDbm: 22,
     product: 0xD0, models: { '433': 0xD4, '868': 0xD9 },
     paths: ['rnode', 'node'], families: both('tdeck'),
-    esp: esp('tdeck', 0x0, '4MB'),
+    esp: esp('tdeck', 0x0, '16MB'),              // firmware partition table is default_16MB.csv
     usb: { app: { vid: 0x303A, pid: 0x1001 } },
-    hasBle: true, hasWifi: true, hasBattery: true,
+    hasBle: true, hasWifi: true, hasBattery: true, ota: 'wifi',
   },
   {
     id: 'lora32v21', name: 'LoRa32 V2.1 (T3)', vendor: 'LilyGO',

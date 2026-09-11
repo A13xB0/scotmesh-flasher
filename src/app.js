@@ -109,6 +109,7 @@ V[0] = () => `
       <button class="choice thin" onclick="app.choose('reconfig')"><span class="ico">✏️</span><span><h3>Reconfigure an existing node</h3><p>Skip flashing. Connect over USB or Bluetooth to change settings, add a remote-management identity, or check the battery.</p></span></button>
     </div>
     <div class="reqs"><span>🖥 Desktop Chrome or Edge</span><span>🔌 USB data cable</span><span>⏱ About four minutes</span></div>
+    <p class="small" style="margin-top:14px;color:var(--muted)">Already got a node out in the field? <a href="update.html" target="_blank" rel="noopener">Update it over the air</a> — no cable, no computer.</p>
     ${hood(['Nothing talks to the device yet. The choice sets the firmware family (<code>rnode</code> → markqvist releases, <code>node</code> → the ScotMesh microReticulum build) and which boards and settings appear later.', 'Firmware is served from this site’s <code>/firmware/</code> mirror because GitHub release downloads have no CORS headers.'])}
   </section>`;
 
@@ -292,7 +293,8 @@ V[7] = () => {
     <div class="next">
       ${n ? `<a href="${S.consoleUrl || '#'}" target="_blank" rel="noopener"><b>Open the Console →</b><span>Live log, path table, every setting, over USB or Bluetooth.</span></a>
       <a href="https://rns.scotmesh.net" target="_blank" rel="noopener"><b>See it on the backbone →</b><span>rns.scotmesh.net shows the node once its announce arrives.</span></a>
-      <a href="https://wiki.scotmesh.net" target="_blank" rel="noopener"><b>Site it well →</b><span>Antenna, solar and weatherproofing notes on the wiki.</span></a>`
+      <a href="https://wiki.scotmesh.net" target="_blank" rel="noopener"><b>Site it well →</b><span>Antenna, solar and weatherproofing notes on the wiki.</span></a>
+      <a href="update.html${b.ota ? '#' + b.ota : ''}" target="_blank" rel="noopener"><b>Update it later without a cable →</b><span>${b.ota === 'ble' ? 'Bluetooth update window from the node’s own page, then the nRF DFU app on a phone.' : b.ota === 'wifi' ? 'WiFi update window from the node’s own page, then upload from a phone or laptop.' : 'This board has one firmware slot, so updates are over USB; the page explains the rest.'}</span></a>`
       : `<a href="https://wiki.scotmesh.net" target="_blank" rel="noopener"><b>Add it to Sideband →</b><span>Settings → Connectivity → RNode, then enter the profile above.</span></a>
       <a href="https://wiki.scotmesh.net" target="_blank" rel="noopener"><b>Add it to MeshChatX →</b><span>Interfaces → Add → RNode, port ${esc(S.portLabel || '')}.</span></a>
       <a href="https://rns.scotmesh.net" target="_blank" rel="noopener"><b>Join the backbone →</b><span>Addresses and status of the ScotMesh Reticulum node.</span></a>`}
