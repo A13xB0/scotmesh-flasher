@@ -21,16 +21,22 @@ export class DfuSerial {
     await sleep(100);
   }
   async _readLoop() {
+    this.loopDone = new Promise(r => { this._loopDone = r; });
     try {
-      while (this.port.readable) {
+      while (this.port.readable && !this.closing) {
         const reader = this.port.readable.getReader(); this.reader = reader;
         try { for (;;) { const { value, done } = await reader.read(); if (done) break; if (value) { for (const b of value) this.rx.push(b); this._wake(); } } }
         catch (_) { break; } finally { reader.releaseLock(); }
       }
-    } finally { this.lost = true; this._wake(); }
+    } finally { this.lost = true; this._wake(); this._loopDone(); }
   }
   _wake() { const ws = this.waiters; this.waiters = []; ws.forEach(w => w()); }
-  async close() { try { if (this.reader) await this.reader.cancel(); } catch (_) {} try { await this.port.close(); } catch (_) {} }
+  async close() {
+    this.closing = true;
+    try { if (this.reader) await this.reader.cancel(); } catch (_) {}
+    await Promise.race([this.loopDone, sleep(2000)]);      // let the read loop release the port
+    try { await this.port.close(); } catch (_) {}
+  }
 
   // Wait for one SLIP frame (C0 … C0) and return its ack number, or null on timeout.
   async readAck(timeoutMs = ACK_TIMEOUT_MS) {

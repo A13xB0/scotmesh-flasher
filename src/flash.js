@@ -43,7 +43,7 @@ export async function flashNrf52({ bootPort, app, log, progress }) {
   const dfu = new DfuSerial(bootPort, log);
   await dfu.open();
   try { await dfu.flashApplication(app.bin, app.dat, progress); }
-  finally { await sleep(300); await dfu.close(); }
+  finally { await sleep(300); await Promise.race([dfu.close(), sleep(4000)]); log('DFU: bootloader port released', 'dim'); }
 }
 
 // Open+close at 1200 baud: the Adafruit bootloader treats it as "enter serial DFU".
