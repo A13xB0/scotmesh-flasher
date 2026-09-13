@@ -1,3 +1,5 @@
+![ScotMesh Reticulum](https://raw.githubusercontent.com/ScotMesh/branding/main/networks/reticulum/readme-header.png)
+
 # ScotMesh Flasher
 
 The step-by-step web flasher at **[rnode.scotmesh.net](https://rnode.scotmesh.net)**:
