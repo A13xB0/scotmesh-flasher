@@ -6,46 +6,58 @@
 <title>ScotMesh Flasher</title>
 <meta name="description" content="Flash and set up RNode radios and standalone microReticulum nodes for the ScotMesh Reticulum network, from your browser.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0A1424">
+<meta property="og:title" content="ScotMesh Flasher">
+<meta property="og:image" content="https://rnode.scotmesh.net/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="fonts/ibm-plex-sans-condensed-400.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-/* Same identity as scotmesh.net: dark slate, blue accent, violet for the Reticulum family, rounded cards. Deliberately single-theme like the rest of the site. */
+/* ScotMesh brand, Reticulum version (github.com/ScotMesh/branding): Night ground, Reticulum violet accent, IBM Plex. Deliberately single-theme like the rest of the site. */
+@font-face{font-family:"IBM Plex Mono";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/ibm-plex-mono-400.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/ibm-plex-mono-600.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/ibm-plex-sans-condensed-400.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans Condensed";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/ibm-plex-sans-condensed-600.woff2) format("woff2")}
 :root{
-  --ground:#111827; --surface:#1f2937; --surface2:#0f172a; --line:#374151; --line2:#2b3644;
-  --text:#f3f4f6; --muted:#9ca3af; --faint:#6b7280;
-  --accent:#2563eb; --accent-deep:#1d4ed8; --accent-ink:#ffffff; --accent-soft:#1e3a8a; --link:#60a5fa;
-  --violet:#7c3aed; --violet-soft:#a78bfa;
+  --ground:#0A1424; --surface:#101C30; --surface2:#0C1729; --line:#22324D; --line2:#1A2942;
+  --text:#E6EDF7; --muted:#8FA2BD; --faint:#6B7F9C;
+  --accent:#B199F4; --accent-deep:#C4B3F7; --accent-ink:#0A1424; --accent-soft:#2D3253; --link:#B199F4;
+  --violet:#B199F4; --violet-soft:#B199F4;
   --good:#22c55e; --good-soft:#14532d; --warn:#f59e0b; --warn-soft:#3b2a08; --bad:#ef4444; --bad-soft:#450a0a;
-  --mono-bg:#0b1220; --mono-fg:#d1d5db; --mono-dim:#6b7280;
+  --mono-bg:#070F1C; --mono-fg:#D5DEEA; --mono-dim:#6B7F9C;
   --shadow:none;
-  --r:12px;
+  --r:6px;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--ground);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;padding:0 16px 120px}
-h1,h2,h3{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;text-wrap:balance;margin:0;line-height:1.2}
-h1{font-size:clamp(26px,3.4vw,36px);font-weight:700}
-h2{font-size:1.6rem;font-weight:700}
-h3{font-size:1.05rem;font-weight:700}
+body{margin:0;background:var(--ground);color:var(--text);font:17px/1.55 "IBM Plex Sans Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif;padding:0 16px 120px}
+h1,h2,h3{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;text-wrap:balance;margin:0;line-height:1.2;letter-spacing:-.01em}
+h1{font-size:clamp(24px,3.2vw,34px);font-weight:600}
+h2{font-size:1.5rem;font-weight:600}
+h3{font-size:1.02rem;font-weight:600}
 p{margin:0}
-code,.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em}
-code{background:var(--surface2);padding:.1rem .35rem;border-radius:5px}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em}
+code{background:var(--surface2);padding:.1rem .35rem;border-radius:3px}
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 a{color:var(--link)}
 .wrap{max-width:1100px;margin:0 auto}
 
-/* header — same as scotmesh.net */
+/* header: the scotmesh/reticulum lockup, then the tool's name */
 .top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:2rem 0 1rem}
 .brand{display:flex;align-items:center;gap:1rem;text-decoration:none;color:inherit}
-.brand svg{height:56px;width:auto;border-radius:4px;flex:none}
-.brand b{font-size:clamp(26px,3.4vw,36px);font-weight:700;line-height:1.2;display:block}
-.brand small{display:block;color:var(--muted);font-size:1.05rem;font-weight:400;margin-top:.2rem}
+.brand img{height:58px;width:auto;flex:none;display:block}
+.brand span{border-left:1px solid var(--line);padding-left:1rem}
+.brand b{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:clamp(22px,3vw,30px);font-weight:600;letter-spacing:-.02em;line-height:1.15;display:block}
+.brand small{display:block;color:var(--muted);font-size:1rem;font-weight:400;margin-top:.15rem}
+@media (max-width:600px){.brand img{height:44px}.brand span{padding-left:.75rem}}
 .topnav{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
-.topnav a{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.3rem .9rem;color:var(--text);text-decoration:none;font-size:.92rem}
+.topnav a{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:.3rem .9rem;color:var(--text);text-decoration:none;font-size:.92rem}
 .topnav a:hover{border-color:var(--link)}
 .mockbadge{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);padding:4px 8px;border-radius:6px;font-weight:600}
 
 /* shell */
 .shell{display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;padding-top:26px}
-@media (max-width:860px){.shell{grid-template-columns:1fr;gap:18px}}
+@media (max-width:860px){.shell{grid-template-columns:minmax(0,1fr);gap:18px}}
 .rail{position:sticky;top:16px;align-self:start}
 @media (max-width:860px){.rail{position:static}}
 .rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
@@ -63,18 +75,18 @@ a{color:var(--link)}
 .railfoot .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin-top:6px}
 
 /* cards */
-.card{background:var(--surface);border-radius:var(--r);border-top:4px solid var(--violet);padding:26px 28px}
+.card{background:var(--surface);border-radius:var(--r);border:1px solid var(--line);padding:26px 28px}
 @media (max-width:600px){.card{padding:20px 18px}}
-.eyebrow{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px}
+.eyebrow{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:400;margin-bottom:8px}
 .lead{color:var(--muted);max-width:62ch;margin-top:8px}
 .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:26px;padding-top:18px;border-top:1px solid var(--line2)}
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:10px 16px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:4px;padding:10px 16px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:8px}
 .btn:hover{background:var(--surface2)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.primary:hover{background:var(--accent-deep)}
 .btn:hover{background:var(--surface2)}
 .pill.info{color:var(--link)}
-.rail li.cur .n{color:#fff}
+.rail li.cur .n{color:var(--accent-ink)}
 .choice .ico,.devline .ico{color:var(--link)}
 .stepbox .n{color:var(--link)}
 .role b small{color:var(--muted)}
@@ -87,9 +99,9 @@ a{color:var(--link)}
 
 /* start */
 .choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-top:22px}
-.choice{text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:20px 20px 18px;display:flex;flex-direction:column;gap:10px;transition:border-color .15s,transform .15s}
+.choice{text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:8px;padding:20px 20px 18px;display:flex;flex-direction:column;gap:10px;transition:border-color .15s,transform .15s}
 .choice:hover{border-color:var(--accent);transform:translateY(-1px)}
-.choice .ico{width:44px;height:44px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.choice .ico{width:44px;height:44px;border-radius:6px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
 .choice h3{font-size:18px}
 .choice p{color:var(--muted);font-size:14px}
 .choice .who{font-size:12.5px;color:var(--faint);margin-top:auto}
@@ -105,7 +117,7 @@ a{color:var(--link)}
 .chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--muted)}
 .chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .boards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:16px}
-.board{text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;transition:border-color .15s}
+.board{text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:10px;transition:border-color .15s}
 .board:hover{border-color:var(--accent)}
 .board.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .board .pic{height:96px;border-radius:8px;background:var(--surface2);display:grid;place-items:center;position:relative;overflow:hidden}
@@ -169,14 +181,14 @@ textarea{resize:vertical;min-height:72px;font-family:"IBM Plex Mono",monospace;f
 /* connect */
 .steps-inline{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:20px}
 .stepbox{border:1px solid var(--line2);border-radius:12px;padding:16px;background:var(--surface2)}
-.stepbox .n{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:22px;color:var(--accent);line-height:1}
+.stepbox .n{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-weight:600;font-size:22px;color:var(--accent);line-height:1}
 .stepbox h3{margin-top:8px;font-size:15px}
 .stepbox p{color:var(--muted);font-size:13.5px;margin-top:4px}
 .devline{display:flex;align-items:center;gap:12px;margin-top:20px;padding:14px 16px;border:1px solid var(--line);border-radius:12px}
 .devline .ico{width:38px;height:38px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
 .devline b{display:block;font-weight:600}
 .devline small{color:var(--muted)}
-.fallback{margin-top:16px;padding:14px 16px;border-left:3px solid var(--warn);background:var(--warn-soft);border-radius:0 10px 10px 0;font-size:13.5px}
+.fallback{margin-top:16px;padding:14px 16px;border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);background:var(--warn-soft);border-radius:6px;font-size:13.5px}
 .fallback b{color:var(--warn)}
 
 /* configure */
@@ -243,10 +255,10 @@ textarea{resize:vertical;min-height:72px;font-family:"IBM Plex Mono",monospace;f
 /* log drawer */
 .drawer{position:fixed;left:0;right:0;bottom:0;background:var(--mono-bg);color:var(--mono-fg);border-top:1px solid var(--line);z-index:20;transition:height .2s;height:38px;overflow:hidden}
 .drawer.open{height:220px}
-.drawer .bar{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px 0 20px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--mono-dim);user-select:none}
+.drawer .bar{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px 0 20px;font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--mono-dim);user-select:none}
 .drawer .barmain{flex:1;display:flex;align-items:center;gap:12px;border:0;background:none;color:var(--mono-dim);font:inherit;text-align:left;cursor:pointer;min-width:0;height:38px}
 .drawer .tab{border:1px solid var(--line);background:none;color:var(--mono-dim);font:inherit;border-radius:6px;padding:3px 9px;cursor:pointer;white-space:nowrap}
-.drawer .tab.on{color:var(--mono-fg);border-color:var(--link);background:rgba(37,99,235,.15)}
+.drawer .tab.on{color:var(--mono-fg);border-color:var(--link);background:rgba(177,153,244,.15)}
 .drawer .tab .cnt{background:var(--line);color:var(--mono-fg);border-radius:999px;padding:0 6px;font-size:10.5px;margin-left:4px}
 .drawer.open{height:300px}
 .drawer pre{height:262px}
@@ -277,7 +289,7 @@ textarea{resize:vertical;min-height:72px;font-family:"IBM Plex Mono",monospace;f
 .about button{margin-left:auto;flex:none}
 
 /* app-only */
-.errbox{margin-top:16px;padding:12px 14px;border-left:3px solid var(--bad);background:var(--bad-soft);border-radius:0 10px 10px 0;font-size:13.5px}
+.errbox{margin-top:16px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--bad) 45%,transparent);background:var(--bad-soft);border-radius:6px;font-size:13.5px}
 .errbox b{color:var(--bad)}
 .small{font-size:12.5px;color:var(--muted)}
 .choice .ico{font-size:22px}
@@ -288,15 +300,15 @@ textarea{resize:vertical;min-height:72px;font-family:"IBM Plex Mono",monospace;f
 <div class="wrap">
   <header class="top">
     <a class="brand" href="#" onclick="return false">
-      <svg viewBox="0 0 60 36" aria-label="Flag of Scotland" role="img"><rect width="60" height="36" fill="#0065bd"/><path d="M0 0L60 36M60 0L0 36" stroke="#fff" stroke-width="6"/></svg>
-      <span><b>ScotMesh Flasher</b><small>Flash and set up Reticulum radios and nodes from your browser</small></span>
+      <img src="lockup.svg" alt="scotmesh/reticulum" width="208" height="58">
+      <span><b>Flasher</b><small>Flash and set up Reticulum radios and nodes from your browser</small></span>
     </a>
     <nav class="topnav">
-      <a href="https://scotmesh.uk" target="_blank" rel="noopener">🏠 scotmesh.uk</a>
-      <a href="https://scotmesh.net" target="_blank" rel="noopener">🧰 Tools &amp; services</a>
-      <a href="https://rns.scotmesh.net" target="_blank" rel="noopener">📡 Backbone node</a>
-      <a href="https://wiki.scotmesh.net" target="_blank" rel="noopener">📚 Reticulum wiki</a>
-      <a href="console/" target="_blank" rel="noopener">🖥 Console</a>
+      <a href="https://scotmesh.uk" target="_blank" rel="noopener">scotmesh.uk</a>
+      <a href="https://scotmesh.net" target="_blank" rel="noopener">Tools &amp; services</a>
+      <a href="https://rns.scotmesh.net" target="_blank" rel="noopener">Backbone node</a>
+      <a href="https://wiki.scotmesh.net" target="_blank" rel="noopener">Reticulum wiki</a>
+      <a href="console/" target="_blank" rel="noopener">Console</a>
     </nav>
   </header>
 
@@ -309,7 +321,7 @@ textarea{resize:vertical;min-height:72px;font-family:"IBM Plex Mono",monospace;f
   </div>
 
   <footer style="margin-top:2.5rem;color:var(--muted);text-align:center;font-size:.9rem">
-    Built by ScotMesh · GPL‑3 · flashing code from <a href="https://github.com/liamcottle/rnode-flasher" target="_blank" rel="noopener">liamcottle/rnode-flasher</a>, <a href="https://github.com/espressif/esptool-js" target="_blank" rel="noopener">esptool-js</a> and <a href="https://github.com/attermann/microReticulum_Firmware" target="_blank" rel="noopener">microReticulum</a> · <a href="https://github.com/A13xB0/scotmesh-flasher" target="_blank" rel="noopener">source</a>
+    Built by ScotMesh · GPL‑3 · flashing code from <a href="https://github.com/liamcottle/rnode-flasher" target="_blank" rel="noopener">liamcottle/rnode-flasher</a>, <a href="https://github.com/espressif/esptool-js" target="_blank" rel="noopener">esptool-js</a> and <a href="https://github.com/attermann/microReticulum_Firmware" target="_blank" rel="noopener">microReticulum</a> · <a href="https://github.com/ScotMesh/scotmesh-flasher" target="_blank" rel="noopener">source</a>
   </footer>
 </div>
 
